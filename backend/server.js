@@ -51,10 +51,19 @@ app.get('/api/todos/:id', async (req, res) => {
   }
 });
 
-// POST create new todo
+// POST create new todo (enhanced for smart features)
 app.post('/api/todos', async (req, res) => {
   try {
-    const { title, description, category } = req.body;
+    const { 
+      title, 
+      description, 
+      category, 
+      original_text, 
+      date, 
+      business, 
+      location, 
+      validation_status 
+    } = req.body;
     
     if (!title || !category) {
       return res.status(400).json({ error: 'Title and category are required' });
@@ -65,8 +74,18 @@ app.post('/api/todos', async (req, res) => {
     }
     
     const result = await pool.query(
-      'INSERT INTO todos (title, description, category) VALUES ($1, $2, $3) RETURNING *',
-      [title, description || '', category]
+      `INSERT INTO todos (title, description, category, original_text, date, business, location, validation_status) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [
+        title, 
+        description || '', 
+        category,
+        original_text || null,
+        date || null,
+        business ? JSON.stringify(business) : null,
+        location ? JSON.stringify(location) : null,
+        validation_status || 'pending'
+      ]
     );
     
     res.status(201).json(result.rows[0]);

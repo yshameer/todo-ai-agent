@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import SmartTodoCreator from './components/SmartTodoCreator';
 import TodoForm from './components/TodoForm';
 import TodoList from './components/TodoList';
 import CategoryFilter from './components/CategoryFilter';
 import './App.css';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 function App() {
   const [todos, setTodos] = useState([]);
@@ -14,6 +15,8 @@ function App() {
   const [editingTodo, setEditingTodo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [useSmartCreator, setUseSmartCreator] = useState(true);
+  const [gettingAlternatives, setGettingAlternatives] = useState(null);
 
   useEffect(() => {
     fetchTodos();
@@ -91,21 +94,73 @@ function App() {
 
   const cancelEdit = () => {
     setEditingTodo(null);
+    setGettingAlternatives(null);
+  };
+
+  const handleGetAlternatives = async (todo) => {
+    try {
+      setGettingAlternatives(todo.id);
+      const response = await axios.post(`${API_BASE_URL}/get-alternatives`, {
+        todoId: todo.id,
+        originalText: todo.original_text || todo.title
+      });
+      
+      if (response.data.suggestions && response.data.suggestions.length > 0) {
+        setEditingTodo({
+          ...todo,
+          showSuggestions: true,
+          suggestions: response.data.suggestions
+        });
+      } else {
+        setError('No alternatives found for this todo');
+      }
+      
+      setError('');
+    } catch (err) {
+      setError('Failed to get alternatives');
+      console.error('Error getting alternatives:', err);
+    } finally {
+      setGettingAlternatives(null);
+    }
+  };
+
+  const toggleCreatorMode = () => {
+    setUseSmartCreator(!useSmartCreator);
+    if (editingTodo) {
+      setEditingTodo(null);
+    }
   };
 
   return (
     <div className="app">
       <div className="container">
-        <h1 className="app-title">TODO App</h1>
+        <h1 className="app-title">
+          Smart TODO App
+          <button 
+            onClick={toggleCreatorMode}
+            className="mode-toggle"
+            title={`Switch to ${useSmartCreator ? 'Simple' : 'Smart'} Mode`}
+          >
+            {useSmartCreator ? '🤖' : '📝'}
+          </button>
+        </h1>
         
         {error && <div className="error-message">{error}</div>}
         
-        <TodoForm 
-          onSubmit={addTodo}
-          editingTodo={editingTodo}
-          onUpdate={updateTodo}
-          onCancel={cancelEdit}
-        />
+        {useSmartCreator ? (
+          <SmartTodoCreator
+            onSubmit={addTodo}
+            editingTodo={editingTodo}
+            onCancel={cancelEdit}
+          />
+        ) : (
+          <TodoForm 
+            onSubmit={addTodo}
+            editingTodo={editingTodo}
+            onUpdate={updateTodo}
+            onCancel={cancelEdit}
+          />
+        )}
         
         <CategoryFilter 
           selectedCategory={selectedCategory}
@@ -125,7 +180,16 @@ function App() {
             onToggleComplete={toggleComplete}
             onEdit={startEdit}
             onDelete={deleteTodo}
+            onGetAlternatives={handleGetAlternatives}
           />
+        )}
+        
+        {gettingAlternatives && (
+          <div className="loading-overlay">
+            <div className="loading-message">
+              Getting smart alternatives...
+            </div>
+          </div>
         )}
       </div>
     </div>
