@@ -74,7 +74,7 @@ app.post('/api/todos', async (req, res) => {
     }
     
     const result = await pool.query(
-      `INSERT INTO todos (title, description, category, original_text, date, business, location, validation_status) 
+      `INSERT INTO todos (title, description, category, original_text, scheduled_datetime, business_info, location_data, validation_status) 
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
       [
         title, 

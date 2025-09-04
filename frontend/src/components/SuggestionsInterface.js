@@ -4,7 +4,8 @@ const SuggestionsInterface = ({
   suggestions, 
   onSelectSuggestion, 
   onModifyOriginal, 
-  validationResults 
+  validationResults,
+  reasoning = ''
 }) => {
   if (!suggestions || suggestions.length === 0) return null;
 
@@ -48,6 +49,15 @@ const SuggestionsInterface = ({
         <p className="suggestions-subtitle">
           We found some potential improvements for your todo. Choose an option below:
         </p>
+        {reasoning && (
+          <div className="suggestions-reasoning">
+            <div className="reasoning-header">
+              <span className="reasoning-icon">🧠</span>
+              Why we suggest changes:
+            </div>
+            <div className="reasoning-text">{reasoning}</div>
+          </div>
+        )}
       </div>
 
       <div className="suggestions-content">
@@ -78,89 +88,34 @@ const SuggestionsInterface = ({
           <span className="divider-text">or choose a suggestion</span>
         </div>
 
-        <div className="suggestions-grid">
+        <div className="recommendations-grid">
           {suggestions.map((suggestion, index) => (
-            <div key={index} className="suggestion-card">
-              <div className="suggestion-header">
-                <div className="suggestion-title">
-                  Option {index + 1}
-                  {suggestion.confidence && (
-                    <span className="confidence-badge">
-                      {Math.round(suggestion.confidence * 100)}% match
-                    </span>
-                  )}
+            <div key={index} className="recommendation-card">
+              <div className="recommendation-header">
+                <div className="recommendation-type">
+                  <span className="type-icon">
+                    {suggestion.type === 'business_hours' ? '🕒' : 
+                     suggestion.type === 'date' ? '📅' : 
+                     suggestion.type === 'location' ? '📍' : '💡'}
+                  </span>
+                  <span className="type-label">
+                    {suggestion.type === 'business_hours' ? 'Business Hours' : 
+                     suggestion.type === 'date' ? 'Date Recommendation' : 
+                     suggestion.type === 'location' ? 'Location Suggestion' : 
+                     suggestion.type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                  </span>
                 </div>
-                
-                {suggestion.reason && (
-                  <div className={`suggestion-reason ${getReasonColor(suggestion.reason)}`}>
-                    {suggestion.reason}
-                  </div>
-                )}
               </div>
 
-              <div className="suggestion-content">
-                <div className="suggestion-text">
-                  "{suggestion.text}"
+              <div className="recommendation-content">
+                <div className="recommendation-description">
+                  {suggestion.description}
                 </div>
                 
-                <div className="suggestion-preview">
-                  {formatSuggestionPreview(suggestion)}
+                <div className="recommendation-action">
+                  <span className="action-icon">👉</span>
+                  <span className="action-text">{suggestion.action}</span>
                 </div>
-
-                {suggestion.parsed?.business && (
-                  <div className="business-details">
-                    <div className="business-card">
-                      <div className="business-header">
-                        <span className="business-name">
-                          {suggestion.parsed.business.name}
-                        </span>
-                        {suggestion.parsed.business.rating && (
-                          <span className="business-rating">
-                            ⭐ {suggestion.parsed.business.rating}
-                          </span>
-                        )}
-                      </div>
-                      
-                      {suggestion.parsed.business.hours && (
-                        <div className="business-hours">
-                          🕐 {suggestion.parsed.business.hours}
-                        </div>
-                      )}
-                      
-                      {suggestion.parsed.business.phone && (
-                        <div className="business-phone">
-                          📞 {suggestion.parsed.business.phone}
-                        </div>
-                      )}
-                      
-                      {suggestion.parsed.business.distance && (
-                        <div className="business-distance">
-                          📍 {suggestion.parsed.business.distance}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {suggestion.benefits && (
-                  <div className="suggestion-benefits">
-                    <h5>Why this is better:</h5>
-                    <ul>
-                      {suggestion.benefits.map((benefit, benefitIndex) => (
-                        <li key={benefitIndex}>{benefit}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-
-              <div className="suggestion-actions">
-                <button 
-                  onClick={() => onSelectSuggestion(suggestion)}
-                  className="btn btn-primary btn-suggestion"
-                >
-                  Use This Option
-                </button>
               </div>
             </div>
           ))}

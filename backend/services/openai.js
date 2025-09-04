@@ -44,7 +44,10 @@ class OpenAIService {
             - category: Work/Personal based on context
 
             If a field is not mentioned or unclear, set it to null.
-            Current date context: ${new Date().toISOString().split('T')[0]}`
+            Current date context: Today is ${new Date().toLocaleDateString('en-US', {timeZone: 'America/New_York', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'})} in Eastern Time
+            Current timezone: Eastern Time (EST/EDT)
+            When parsing relative dates like "tomorrow", use Eastern Time zone.
+            For dates, return format YYYY-MM-DD based on Eastern Time.`
           },
           {
             role: "user",

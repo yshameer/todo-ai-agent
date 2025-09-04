@@ -6,7 +6,9 @@ const SmartTodoCreator = ({ onSubmit, onCancel, editingTodo }) => {
   const [input, setInput] = useState('');
   const [validationState, setValidationState] = useState('idle'); // idle, loading, valid, warning, error
   const [validationResults, setValidationResults] = useState(null);
+  const [validationIssues, setValidationIssues] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
+  const [suggestionsReasoning, setSuggestionsReasoning] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [error, setError] = useState('');
   const textareaRef = useRef(null);
@@ -34,7 +36,9 @@ const SmartTodoCreator = ({ onSubmit, onCancel, editingTodo }) => {
     setInput('');
     setValidationState('idle');
     setValidationResults(null);
+    setValidationIssues([]);
     setSuggestions([]);
+    setSuggestionsReasoning('');
     setShowSuggestions(false);
     setError('');
   };
@@ -50,7 +54,7 @@ const SmartTodoCreator = ({ onSubmit, onCancel, editingTodo }) => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/validate-todo', {
+      const response = await fetch('http://localhost:3001/api/todos/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: text.trim() })
@@ -62,20 +66,30 @@ const SmartTodoCreator = ({ onSubmit, onCancel, editingTodo }) => {
 
       const data = await response.json();
       
-      if (data.valid) {
+      if (data.validationStatus === 'valid') {
         setValidationState('valid');
-        setValidationResults(data.parsed);
+        setValidationResults(data.parsedData);
+        setValidationIssues([]);
         setShowSuggestions(false);
-      } else if (data.warnings && data.warnings.length > 0) {
+      } else if (data.validationStatus === 'requires_attention' || data.validationStatus === 'warning' || (data.validationIssues && data.validationIssues.length > 0)) {
         setValidationState('warning');
-        setValidationResults(data.parsed);
-        setSuggestions(data.suggestions || []);
-        setShowSuggestions(true);
+        setValidationResults(data.parsedData);
+        setValidationIssues(data.validationIssues || []);
+        // Handle suggestedAlternatives as object with suggestions array
+        const alternatives = data.suggestedAlternatives?.suggestions || data.suggestedAlternatives || [];
+        const reasoning = data.suggestedAlternatives?.reasoning || '';
+        setSuggestions(alternatives);
+        setSuggestionsReasoning(reasoning);
+        setShowSuggestions(alternatives.length > 0);
       } else {
         setValidationState('error');
-        setValidationResults(data.parsed);
-        setSuggestions(data.suggestions || []);
-        setShowSuggestions(true);
+        setValidationResults(data.parsedData);
+        setValidationIssues(data.validationIssues || []);
+        const alternatives = data.suggestedAlternatives?.suggestions || data.suggestedAlternatives || [];
+        const reasoning = data.suggestedAlternatives?.reasoning || '';
+        setSuggestions(alternatives);
+        setSuggestionsReasoning(reasoning);
+        setShowSuggestions(alternatives.length > 0);
       }
     } catch (err) {
       console.error('Validation error:', err);
@@ -87,16 +101,25 @@ const SmartTodoCreator = ({ onSubmit, onCancel, editingTodo }) => {
   const handleInputChange = (e) => {
     const value = e.target.value;
     setInput(value);
-
-    // Clear previous timeout
-    if (validationTimeoutRef.current) {
-      clearTimeout(validationTimeoutRef.current);
+    
+    // Reset validation state when user starts typing
+    if (validationState !== 'idle') {
+      setValidationState('idle');
+      setValidationResults(null);
+      setValidationIssues([]);
+      setSuggestions([]);
+      setSuggestionsReasoning('');
+      setShowSuggestions(false);
+      setError('');
     }
+  };
 
-    // Debounce validation after 1 second of no typing
-    validationTimeoutRef.current = setTimeout(() => {
-      validateTodo(value);
-    }, 1000);
+  const handleValidate = async () => {
+    if (!input.trim()) {
+      setError('Please enter a todo description');
+      return;
+    }
+    await validateTodo(input);
   };
 
   const handleSubmit = async () => {
@@ -111,7 +134,7 @@ const SmartTodoCreator = ({ onSubmit, onCancel, editingTodo }) => {
     }
 
     if (!validationResults) {
-      await validateTodo(input);
+      setError('Please validate your todo first by clicking "Analyze Todo"');
       return;
     }
 
@@ -206,6 +229,7 @@ const SmartTodoCreator = ({ onSubmit, onCancel, editingTodo }) => {
         <ValidationPanel 
           results={validationResults}
           status={validationState}
+          validationIssues={validationIssues}
         />
       )}
 
@@ -215,10 +239,21 @@ const SmartTodoCreator = ({ onSubmit, onCancel, editingTodo }) => {
           onSelectSuggestion={handleSuggestionSelect}
           onModifyOriginal={handleModifyOriginal}
           validationResults={validationResults}
+          reasoning={suggestionsReasoning}
         />
       )}
 
       <div className="creator-actions">
+        {input.trim() && validationState === 'idle' && (
+          <button 
+            onClick={handleValidate}
+            className="btn btn-secondary"
+            disabled={validationState === 'loading'}
+          >
+            🔍 Analyze Todo
+          </button>
+        )}
+        
         <button 
           onClick={handleSubmit}
           className="btn btn-primary btn-large"

@@ -6,7 +6,7 @@ import TodoList from './components/TodoList';
 import CategoryFilter from './components/CategoryFilter';
 import './App.css';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/api';
 
 function App() {
   const [todos, setTodos] = useState([]);

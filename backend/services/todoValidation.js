@@ -123,12 +123,27 @@ class TodoValidationService {
     if (!date) return null;
     
     try {
+      // Create date in EST timezone
       if (time) {
-        return new Date(`${date}T${time}`);
+        // Combine date and time and interpret in EST
+        const dateTimeString = `${date}T${time}:00`;
+        const localDate = new Date(dateTimeString);
+        
+        // Convert to EST by adjusting for timezone offset
+        const estOffset = -5 * 60; // EST is UTC-5 (in minutes)
+        const estDate = new Date(localDate.getTime() + (estOffset - localDate.getTimezoneOffset()) * 60000);
+        return estDate;
       } else {
-        return new Date(date);
+        // For date-only, assume noon EST
+        const dateTimeString = `${date}T12:00:00`;
+        const localDate = new Date(dateTimeString);
+        
+        const estOffset = -5 * 60; // EST is UTC-5 (in minutes)  
+        const estDate = new Date(localDate.getTime() + (estOffset - localDate.getTimezoneOffset()) * 60000);
+        return estDate;
       }
     } catch (error) {
+      console.error('Error combining date and time:', error);
       return new Date(date);
     }
   }
